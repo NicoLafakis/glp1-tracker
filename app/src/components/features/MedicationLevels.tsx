@@ -26,6 +26,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   ReferenceLine,
+  ReferenceDot,
 } from 'recharts';
 import { format } from 'date-fns';
 
@@ -47,6 +48,29 @@ export function MedicationLevels() {
       time: format(l.timestamp, 'HH:mm'),
       level: Math.round(l.level * 10) / 10,
     }));
+
+  // Get injection markers with symptoms for the chart
+  const injectionMarkers = injections
+    .filter((inj) => {
+      const injTime = new Date(`${inj.date}T${inj.time}`).getTime();
+      const now = Date.now();
+      const daysAgo21 = now - 21 * 24 * 60 * 60 * 1000;
+      return injTime >= daysAgo21 && injTime <= now;
+    })
+    .map((inj) => {
+      const injTime = new Date(`${inj.date}T${inj.time}`).getTime();
+      // Find the closest chart data point
+      const closestPoint = chartData.reduce((prev, curr) =>
+        Math.abs(curr.timestamp - injTime) < Math.abs(prev.timestamp - injTime) ? curr : prev
+      );
+      return {
+        injection: inj,
+        date: closestPoint.date,
+        level: closestPoint.level,
+        hasSymptoms: inj.symptoms.length > 0 && !inj.symptoms.includes('None'),
+        symptoms: inj.symptoms.filter((s) => s !== 'None'),
+      };
+    });
 
   const getLevelStatus = (level: number) => {
     if (level >= 70) return { label: 'Optimal', color: 'success' };
@@ -213,15 +237,39 @@ export function MedicationLevels() {
                     strokeWidth={2}
                     fill="url(#levelGradient)"
                   />
+                  {/* Injection markers with symptom indicators */}
+                  {injectionMarkers.map((marker) => (
+                    <ReferenceDot
+                      key={marker.injection.id}
+                      x={marker.date}
+                      y={marker.level}
+                      r={marker.hasSymptoms ? 8 : 6}
+                      fill={marker.hasSymptoms ? '#F4A261' : '#2D5F5D'}
+                      stroke="#fff"
+                      strokeWidth={2}
+                    />
+                  ))}
                 </AreaChart>
               </ResponsiveContainer>
             </div>
-            <div className="mt-4 flex items-center gap-2 text-sm text-text-muted">
-              <AlertCircle className="w-4 h-4" />
-              <span>
-                Based on {medicationSettings.medicationType} pharmacokinetics with a{' '}
-                {medicationSettings.halfLifeDays}-day half-life
-              </span>
+            <div className="mt-4 space-y-2">
+              <div className="flex items-center gap-4 text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-primary" />
+                  <span className="text-text-muted">Injection</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-accent" />
+                  <span className="text-text-muted">Injection with symptoms</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-text-muted">
+                <AlertCircle className="w-4 h-4" />
+                <span>
+                  Based on {medicationSettings.medicationType} pharmacokinetics with a{' '}
+                  {medicationSettings.halfLifeDays}-day half-life
+                </span>
+              </div>
             </div>
           </CardContent>
         </Card>

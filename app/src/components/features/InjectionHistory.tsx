@@ -56,6 +56,11 @@ export function InjectionHistory() {
                 </div>
                 <div className="font-mono text-sm text-text-muted">
                   {formatTime(entry.time)}
+                  {entry.dosage && (
+                    <span className="ml-2 font-semibold text-accent">
+                      · {entry.dosage}mg
+                    </span>
+                  )}
                 </div>
               </div>
               <AlertDialog>

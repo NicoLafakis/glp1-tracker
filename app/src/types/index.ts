@@ -5,28 +5,34 @@ export interface Injection {
   date: string;
   time: string;
   site: InjectionSite;
+  dosage: number; // in mg, default 0.25
   symptoms: Symptom[];
   notes?: string;
   timestamp: number;
 }
 
 export type InjectionSite =
-  | 'Abdomen (Left)'
-  | 'Abdomen (Right)'
+  | 'Upper Abdomen (Left)'
+  | 'Upper Abdomen (Right)'
+  | 'Lower Abdomen (Left)'
+  | 'Lower Abdomen (Right)'
   | 'Thigh (Left)'
   | 'Thigh (Right)'
   | 'Upper Arm (Left)'
   | 'Upper Arm (Right)';
 
 export type Symptom =
+  | 'Decreased Appetite'
   | 'Nausea'
+  | 'Headache'
+  | 'Fatigue'
+  | 'Dizziness'
+  | 'Indigestion'
+  | 'Hair Loss'
   | 'Constipation'
   | 'Diarrhea'
-  | 'Fatigue'
-  | 'Headache'
-  | 'Dizziness'
-  | 'Decreased Appetite'
-  | 'Injection Site Reaction'
+  | 'Vomiting'
+  | 'Heartburn'
   | 'None';
 
 export interface WeightEntry {
