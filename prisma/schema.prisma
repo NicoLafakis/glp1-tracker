@@ -1,0 +1,154 @@
+// Prisma schema for HubSpot CRM Simulator
+// Using PostgreSQL (Railway)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User accounts
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // HubSpot OAuth tokens
+  hubspotConnection HubSpotConnection?
+
+  // Simulation history
+  simulations   Simulation[]
+
+  // Sessions for NextAuth
+  sessions      Session[]
+  accounts      Account[]
+}
+
+// NextAuth Account model
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+// NextAuth Session model
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// NextAuth VerificationToken model
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// HubSpot OAuth connection
+model HubSpotConnection {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  portalId     String
+  accessToken  String   @db.Text
+  refreshToken String   @db.Text
+  expiresAt    DateTime
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// Simulation record
+model Simulation {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Configuration
+  businessType     String
+  businessName     String
+  salesStyle       String
+  distributionType String
+  timeFrame        String
+
+  // Record counts
+  contactCount     Int
+  companyCount     Int
+  dealCount        Int
+  ticketCount      Int
+
+  // Options
+  includeActivities     Boolean @default(true)
+  includeNotes          Boolean @default(true)
+  realisticTimestamps   Boolean @default(true)
+  progressiveLifecycle  Boolean @default(true)
+
+  // Status
+  status           SimulationStatus @default(PENDING)
+  currentPhase     String?
+  recordsCreated   Int              @default(0)
+  totalRecords     Int              @default(0)
+
+  // Timing
+  startedAt        DateTime?
+  completedAt      DateTime?
+
+  // Results
+  errors           String[]         @default([])
+
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  // Generated record IDs for reference
+  generatedRecords GeneratedRecord[]
+}
+
+// Track generated records for deduplication
+model GeneratedRecord {
+  id           String     @id @default(cuid())
+  simulationId String
+  simulation   Simulation @relation(fields: [simulationId], references: [id], onDelete: Cascade)
+
+  recordType   String     // contact, company, deal, ticket
+  hubspotId    String     // HubSpot record ID
+  identifier   String     // email for contacts, name for companies/deals
+
+  createdAt    DateTime   @default(now())
+
+  @@index([simulationId, recordType])
+  @@index([identifier])
+}
+
+enum SimulationStatus {
+  PENDING
+  RUNNING
+  PAUSED
+  COMPLETED
+  FAILED
+  CANCELLED
+}
